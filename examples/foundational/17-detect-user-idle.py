@@ -24,6 +24,20 @@ from pipecat.transports.base_transport import BaseTransport, TransportParams
 from pipecat.transports.network.fastapi_websocket import FastAPIWebsocketParams
 from pipecat.transports.services.daily import DailyParams
 
+from pipecat.services.google.llm import GoogleLLMService
+from pipecat.services.google.llm_vertex import (
+    GoogleVertexLLMService,
+)
+
+from pipecat.services.gemini_multimodal_live.gemini import (
+    GeminiMultimodalLiveLLMService,
+    GeminiMultimodalModalities,
+    InputParams,
+)
+from pipecat.services.gemini_multimodal_live.gemini_vertex import (
+    GoogleVertexMultimodalLiveLLMService,
+)
+
 load_dotenv(override=True)
 
 # We store functions so objects (e.g. SileroVADAnalyzer) don't get
@@ -58,7 +72,43 @@ async def run_example(transport: BaseTransport, _: argparse.Namespace, handle_si
         voice_id="71a7ad14-091c-4e8e-a314-022ece01c121",  # British Reading Lady
     )
 
-    llm = OpenAILLMService(api_key=os.getenv("OPENAI_API_KEY"))
+    ##### temp using this as test bed for gemini/vertex refactor #####
+    ##### 1. vanilla google llm
+    # llm = GoogleLLMService(api_key=os.getenv("GOOGLE_API_KEY"))
+    # # llm = GoogleLLMService(api_key=os.getenv("GOOGLE_API_KEY"), model="gemini-2.0-flash-live-preview-04-09") ## can't use this model here
+
+    # #### 2. google llm on vertex ai
+    # llm = GoogleVertexLLMService(
+    #     credentials=os.getenv("GOOGLE_TEST_CREDENTIALS"),
+    #     params=GoogleVertexLLMService.InputParams(
+    #         project_id=os.getenv("GOOGLE_CLOUD_PROJECT_ID"),
+    #     ),
+    #     # model="google/gemini-2.0-flash-live-preview-04-09", ## can't use this model here
+    # )
+
+    # ##### 3. vanilla live llm
+    # llm = GeminiMultimodalLiveLLMService(
+    #     api_key=os.getenv("GOOGLE_API_KEY"),
+    #     # params=InputParams(modalities=GeminiMultimodalModalities.AUDIO),
+    #     params=InputParams(modalities=GeminiMultimodalModalities.TEXT),
+    #     # model="models/gemini-2.0-flash-live-001"
+    #     # model="gemini-2.0-flash-live-preview-04-09", ## can't use this model here
+    #     # model="models/gemini-2.0-flash-live-preview-04-09"
+    # )
+
+    print(f"_____17-detect-user-idle.py * GeminiMultimodalModalities.TEXT:::: {GeminiMultimodalModalities.TEXT}")
+    #### 4. live llm on vertex ai
+    llm = GoogleVertexMultimodalLiveLLMService(
+        api_key=os.getenv("GOOGLE_API_KEY"),
+        params=GoogleVertexMultimodalLiveLLMService.InputParams( ## need to merge these with default InputParams
+            project_id=os.getenv("GOOGLE_CLOUD_PROJECT_ID"),
+            modalities="TEXT",
+            # modalities=GeminiMultimodalModalities.TEXT,
+        ),
+        # model="models/gemini-2.0-flash-live-001"
+        # model="gemini-2.0-flash-live-preview-04-09"
+        model="models/gemini-2.0-flash-live-preview-04-09"
+    )
 
     messages = [
         {
@@ -79,6 +129,7 @@ async def run_example(transport: BaseTransport, _: argparse.Namespace, handle_si
                     "content": "The user has been quiet. Politely and briefly ask if they're still there.",
                 }
             )
+            print(f"_____17-detect-user-idle.py * handle_user_idle:::::::::::::::")
             await user_idle.push_frame(LLMMessagesFrame(messages))
             return True
         elif retry_count == 2:
@@ -89,6 +140,7 @@ async def run_example(transport: BaseTransport, _: argparse.Namespace, handle_si
                     "content": "The user is still inactive. Ask if they'd like to continue our conversation.",
                 }
             )
+            print(f"_____17-detect-user-idle.py * retry:::::::::::::")
             await user_idle.push_frame(LLMMessagesFrame(messages))
             return True
         else:
