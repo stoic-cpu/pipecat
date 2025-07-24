@@ -101,6 +101,7 @@ async def run_example(transport: BaseTransport, _: argparse.Namespace, handle_si
         api_key=os.getenv("GOOGLE_API_KEY"),
         params=GoogleVertexMultimodalLiveLLMService.InputParams(
             project_id=os.getenv("GOOGLE_CLOUD_PROJECT_ID"),
+            # modalities="AUDIO", 
             modalities="TEXT", 
             # modalities=GeminiMultimodalModalities.TEXT, #ug, figure out why this isn't a string later
         ),

@@ -813,7 +813,6 @@ class GoogleLLMService(LLMService):
                 contents=messages,
                 config=generation_config,
             )
-            await self.stop_ttfb_metrics()
 
             function_calls = []
             async for chunk in WatchdogAsyncIterator(response, manager=self.task_manager):
