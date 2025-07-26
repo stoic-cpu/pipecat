@@ -57,6 +57,7 @@ class TurnTrackingObserver(BaseObserver):
         self._turn_count = 0
         self._is_turn_active = False
         self._is_bot_speaking = False
+        self._is_user_speaking = False
         self._has_bot_spoken = False
         self._turn_start_time = 0
         self._turn_end_timeout_secs = turn_end_timeout_secs
@@ -94,6 +95,8 @@ class TurnTrackingObserver(BaseObserver):
                 await self._start_turn(data)
         elif isinstance(data.frame, UserStartedSpeakingFrame):
             await self._handle_user_started_speaking(data)
+        elif isinstance(data.frame, UserStoppedSpeakingFrame):
+            await self._handle_user_stopped_speaking(data)
         elif isinstance(data.frame, BotStartedSpeakingFrame):
             await self._handle_bot_started_speaking(data)
         # A BotStoppedSpeakingFrame can arrive after a UserStartedSpeakingFrame following an interruption
@@ -130,6 +133,7 @@ class TurnTrackingObserver(BaseObserver):
 
     async def _handle_user_started_speaking(self, data: FramePushed):
         """Handle user speaking events, including interruptions."""
+        self._is_user_speaking = True
         if self._is_bot_speaking:
             # Handle interruption - end current turn and start a new one
             self._cancel_turn_end_timer()  # Cancel any pending end turn timer
@@ -148,10 +152,16 @@ class TurnTrackingObserver(BaseObserver):
             # User is speaking within the same turn (before bot has responded)
             logger.trace(f"User is already speaking in Turn {self._turn_count}")
 
+    async def _handle_user_stopped_speaking(self, data: FramePushed):
+        """Handle user speaking events, including interruptions."""
+        self._is_user_speaking = False
+
     async def _handle_bot_started_speaking(self, data: FramePushed):
         """Handle bot speaking events."""
         self._is_bot_speaking = True
         self._has_bot_spoken = True
+        if self._is_user_speaking:
+            # user_was_interrupted
         # Cancel any pending turn end timer when bot starts speaking again
         self._cancel_turn_end_timer()
 
